@@ -1,0 +1,25 @@
+repos:
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v2.3.0
+      hooks:
+          - id: check-yaml
+          - id: end-of-file-fixer
+          - id: trailing-whitespace
+          - id: check-added-large-files
+          - id: check-toml
+    - repo: local
+      hooks:
+          - id: lint
+            name: Lint source code
+            language: system
+            # exclude init files containing imports
+            entry: ruff check --fix
+            exclude: __init__.py
+            types:
+                - python
+          - id: format
+            name: Format source code
+            language: system
+            entry: ruff format
+            types:
+                - python

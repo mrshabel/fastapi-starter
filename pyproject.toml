@@ -1,0 +1,19 @@
+[project]
+name = "fastapi-starter"
+version = "0.1.0"
+description = "A starter template for FastAPI projects"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.115.8",
+    "passlib[bcrypt]>=1.7.4",
+    "pydantic-settings>=2.7.1",
+    "pyjwt>=2.10.1",
+    "sqlmodel",
+]
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.1.0",
+    "ruff>=0.9.6",
+]

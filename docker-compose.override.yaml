@@ -1,0 +1,32 @@
+services:
+    api:
+        container_name: fastapi-starter-api
+        build: .
+        command: ["fastapi", "dev", "src/main.py"]
+        healthcheck:
+            # ping application with curl fast-fail
+            test: ["CMD", "curl", "-f", "http://localhost:8000/health-check"]
+            interval: 30s
+            timeout: 30s
+            retries: 5
+            start_period: 30s
+        ports:
+            - 8000:8000
+        volumes:
+            - ./data:/app/data
+        env_file:
+            - .env
+        develop:
+            watch:
+                # Sync the working directory with the `/app` directory in the container
+                - action: sync
+                  path: ./src
+                  target: /app/src
+                  # Exclude the project virtual environment
+                  ignore:
+                      - .venv/
+                      - __pycache__/
+
+                # Rebuild the image on changes to the `pyproject.toml`
+                - action: rebuild
+                  path: ./pyproject.toml
