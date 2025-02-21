@@ -1,3 +1,4 @@
+import time
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.logger import logger
@@ -32,9 +33,6 @@ app = FastAPI(
 )
 
 
-# add middlewares here
-app.add_middleware(ExceptionHandlerMiddleware)
-
 # declare cors middleware
 app.add_middleware(
     CORSMiddleware,
@@ -43,6 +41,19 @@ app.add_middleware(
     allow_methods=AppConfig.ALLOWED_METHODS,
     allow_headers=["*"],
 )
+
+
+# add middlewares here
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    start_time = time.perf_counter()
+    response = await call_next(request)
+    process_time = time.perf_counter() - start_time
+    response.headers["X-Process-Time"] = f"{(process_time * 1000):.2f}"
+    return response
+
+
+app.add_middleware(ExceptionHandlerMiddleware)
 
 
 # exception handlers

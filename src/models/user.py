@@ -19,6 +19,12 @@ class UserRole(StrEnum):
     USER = "user"
 
 
+class OAuthProvider(StrEnum):
+    """Supported OAuth Providers"""
+
+    GOOGLE = "google"
+
+
 # Shared properties
 class UserBase(SQLModel):
     email: EmailStr = Field(
@@ -194,6 +200,10 @@ class UsersPublicResponse(UsersPublic):
     message: str
 
 
+class OAuthInitResponse(SQLModel):
+    url: str
+
+
 # JSON payload containing access token
 class Token(SQLModel):
     access_token: str
@@ -203,6 +213,11 @@ class Token(SQLModel):
 class UserLoginResponse(Token):
     message: str
     data: UserPublic
+    refresh_token: str
+
+
+class TokenRefreshResponse(Token):
+    message: str
     refresh_token: str
 
 
@@ -226,3 +241,32 @@ class NewPassword(SQLModel):
         alias_generator=to_camel,
         populate_by_name=True,
     )
+
+
+class GoogleTokenRequest(SQLModel):
+    code: str
+    redirect_uri: str
+    client_id: str
+    client_secret: str
+    scope: str
+    state: str
+    grant_type: str = "authorization_code"
+
+
+class GoogleTokenResponse(SQLModel):
+    access_token: str
+    expires_in: int
+    refresh_token: str
+    scope: str
+    token_type: str
+    id_token: str
+
+
+class GoogleOAuthTokenPayload(SQLModel):
+    email: str
+    email_verified: bool
+    at_hash: str  # access token hash
+    name: str
+    picture: str
+    given_name: str  # first name
+    family_name: str  # last name

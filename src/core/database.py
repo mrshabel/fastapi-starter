@@ -1,7 +1,7 @@
 from sqlmodel import SQLModel, create_engine
 from sqlalchemy import event
 from src.core.config import AppConfig
-from src.models import *
+from src.models import *  # noqa
 
 # disable strict single thread check
 connect_args = {"check_same_thread": False}
