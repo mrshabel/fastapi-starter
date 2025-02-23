@@ -1,5 +1,14 @@
+import httpx
+import urllib.parse
+from fastapi.logger import logger
 from fastapi.security import OAuth2PasswordRequestForm
-from src.core.exceptions import BadActionError, NotFoundError
+from src.core.exceptions import (
+    BadActionError,
+    NotFoundError,
+    InternalServerError,
+    AuthenticationError,
+)
+from src.core.config import AppConfig
 from src.repositories import UserRepository
 from src.models.user import (
     UserCreate,
@@ -9,11 +18,21 @@ from src.models.user import (
     UserRegister,
     UserRole,
     UpdatePassword,
+    User,
+    OAuthProvider,
+    GoogleTokenRequest,
+    GoogleTokenResponse,
 )
 from src.core.security import (
     create_password_hash,
     verify_password,
     create_access_token,
+    create_refresh_token,
+    decode_refresh_token,
+    get_external_oauth_url,
+    decode_google_token,
+    update_client_state,
+    check_client_state,
 )
 from pydantic import UUID4
 from sqlmodel import Session
@@ -55,7 +74,7 @@ class AuthService:
             raise BadActionError("Incorrect email or password")
 
         # generate tokens
-        token_data = TokenPayload(sub=str(user.id), role=user.role)
+        token_data = TokenPayload(sub=user.id, role=user.role)
         access_token = create_access_token(token_data)
         refresh_token = create_access_token(token_data)
         return user, access_token, refresh_token
@@ -71,8 +90,17 @@ class AuthService:
 
         # generate and return tokens
         # generate tokens
-        token_data = TokenPayload(sub=str(user.id), role=user.role)
+        token_data = TokenPayload(sub=user.id, role=user.role)
         return create_access_token(token_data)
+
+    async def refresh_session(self, refresh_token: str) -> str:
+        """validate refresh token and generate new access token"""
+        data = decode_refresh_token(token=refresh_token)
+        if not data:
+            raise BadActionError("Invalid refresh token")
+
+        access_token = create_access_token(data)
+        return access_token
 
     def deactivate_account(self, id: UUID4, role: UserRole):
         """Update user details"""
@@ -96,3 +124,120 @@ class AuthService:
         updated_user = self.user_repository.save(user)
 
         return updated_user
+
+    def get_oauth_url(self, client_origin: str, provider: OAuthProvider):
+        # compose url and state from client origin
+        # write state to an external structure
+        state = update_client_state(client_origin=client_origin)
+        # compose redirect uri
+        redirect_uri = f"{client_origin}/auth/{provider}/callback.html"
+        return get_external_oauth_url(
+            redirect_uri=redirect_uri, state=state, provider=provider
+        )
+
+    async def handle_oauth(
+        self, code: str, provider: OAuthProvider, client_origin: str, state: str
+    ) -> tuple[User, str, str]:
+        """
+        Handle OAuth flow by exchanging code for necessary tokens and user details
+
+        Parameters:
+            code (str): the code received from oauth server
+            provider (OAuthProvider): the oauth provider
+            state (str): the state token used in initiating the oauth flow
+
+        Returns:
+            tuple[user, access_token, refresh_token]
+        """
+
+        # get user account details
+        user_data: UserCreate
+        try:
+            match provider:
+                case OAuthProvider.GOOGLE:
+                    try:
+                        token = await self._get_google_token(
+                            code=code, client_origin=client_origin, state=state
+                        )
+                    except BaseException:
+                        logger.error(
+                            "Failed to retrieve google access token", exc_info=True
+                        )
+                        raise
+
+                    user = await self._get_google_user(token)
+                    # check if user email is verified
+                    if not user.email_verified:
+                        raise BadActionError("Email not verified")
+
+                    user_data = UserCreate(
+                        email=user.email,
+                        # compose fullname
+                        full_name=f"{user.given_name} {user.family_name}",
+                        password=AppConfig.OAUTH_DEFAULT_PASSWORD,
+                        role=UserRole.USER,
+                    )
+                case _:
+                    raise InternalServerError("OAuth Provider not supported")
+        except BaseException:
+            logger.error("Failed to retrieve user details", exc_info=True)
+            raise BadActionError("Failed to retrieve user details")
+
+        # check if user already exists in system
+        user = self.user_repository.get_by_email(email=user_data.email)
+        if not user:
+            user = self.user_repository.create(user_data)
+
+        # create tokens
+        token_data = TokenPayload(sub=user.id, role=user.role)
+
+        access_token = create_access_token(token_data)
+        refresh_token, _ = create_refresh_token(token_data)
+        return user, access_token, refresh_token
+
+    async def _get_google_token(
+        self, code: str, client_origin: str, state: str, provider=OAuthProvider.GOOGLE
+    ):
+        """Request for google oauth token with code received on callback endpoint"""
+        # raise exception if state does not exist or has expired
+        if not check_client_state(state=state):
+            raise BadActionError("Invalid OAuth state")
+
+        # compose redirect uri
+        redirect_uri = f"{client_origin}/auth/{provider}/callback.html"
+        # compose url-encoded data
+        data = urllib.parse.urlencode(
+            GoogleTokenRequest(
+                code=code,
+                client_id=AppConfig.GOOGLE_CLIENT_ID,
+                client_secret=AppConfig.GOOGLE_CLIENT_SECRET,
+                redirect_uri=redirect_uri,
+                state=state,
+                scope=AppConfig.GOOGLE_OAUTH_SCOPES,
+            ).model_dump()
+        )
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+
+        async with httpx.AsyncClient(timeout=120) as client:
+            res = await client.post(
+                url=AppConfig.GOOGLE_OAUTH_TOKEN_URL, content=data, headers=headers
+            )
+
+        if res.status_code != 200:
+            # raise exception
+            raise InternalServerError("Failed to retrieve google access token")
+
+        data = res.json()
+
+        return GoogleTokenResponse(**data)
+
+    async def _get_google_user(self, token: GoogleTokenResponse):
+        # decode and retrieve user details
+        data = decode_google_token(token.id_token)
+
+        # raise exception if token is malformed or expired
+        if not data:
+            raise AuthenticationError("Expired Token")
+
+        # return user details from token
+        return data

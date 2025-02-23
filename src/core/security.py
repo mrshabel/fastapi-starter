@@ -1,9 +1,11 @@
 import jwt
 import random
+import urllib.parse
+import hashlib
 from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from src.core.config import AppConfig
-from src.models.user import TokenPayload
+from src.models.user import TokenPayload, GoogleOAuthTokenPayload, OAuthProvider
 from fastapi.logger import logger
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -144,3 +146,82 @@ def generate_otp(length: int = 6) -> tuple[str, datetime]:
     otp = [random.choice(domain) for _ in range(length)]
 
     return "".join(otp), expiry
+
+
+# external oauth
+# store all clients that have initiated the oauth flow with their ttl
+connected_oath_clients: dict[str, datetime] = {}
+
+
+def update_client_state(client_origin: str):
+    ttl = datetime.now(timezone.utc) + timedelta(minutes=5)
+    state = hashlib.sha256(client_origin.encode()).hexdigest()
+    # TODO: lock map with a mutex to ensure atomic writes
+    connected_oath_clients[state] = ttl
+    return state
+
+
+def check_client_state(state: str) -> bool:
+    """Check if an OAuth client has initiated a request"""
+    # check if state exists or ttl has not expired
+    ttl = connected_oath_clients.get(state)
+    if not ttl:
+        return False
+
+    if ttl < datetime.now(timezone.utc):
+        # invalidate cache
+        connected_oath_clients.pop(state)
+        return False
+
+    return True
+
+
+def get_external_oauth_url(
+    redirect_uri: str, state: str, provider: OAuthProvider = OAuthProvider.GOOGLE
+):
+    # compose details based on provider
+    url: str
+    client_id: str
+    scope: str
+
+    match provider:
+        case OAuthProvider.GOOGLE:
+            url = AppConfig.GOOGLE_OAUTH_URL
+            client_id = AppConfig.GOOGLE_CLIENT_ID
+            scope = AppConfig.GOOGLE_OAUTH_SCOPES
+        case _:
+            return
+
+    # define client options, redirect url and scopes
+    params = {
+        "client_id": client_id,
+        "scope": scope,
+        "state": state,
+        "redirect_uri": redirect_uri,
+        "prompt": "consent",
+        "response_type": "code",
+        "access_type": "offline",
+    }
+    # encode params into query string
+    query = urllib.parse.urlencode(params)
+
+    return f"{url}?{query}"
+
+
+def decode_google_token(token: str):
+    """Decode the token from google oauth"""
+    try:
+        payload = jwt.decode(
+            token,
+            algorithms=AppConfig.OAUTH_TOKEN_ALGORITHM,
+            options={"verify_signature": False},
+        )
+        expiry = payload.get("exp")
+        if not expiry or datetime.fromtimestamp(expiry) < datetime.now():
+            return None
+
+    except Exception as e:
+        logger.warning("Fatal Error. Token verification failed: ", str(e))
+        return None
+
+    return GoogleOAuthTokenPayload(**payload)

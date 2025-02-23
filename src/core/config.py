@@ -27,6 +27,15 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_HOURS: int
     OTP_EXPIRE_MINUTES: int = 10
 
+    # oauth client credentials
+    GOOGLE_CLIENT_ID: str
+    GOOGLE_CLIENT_SECRET: str
+    GOOGLE_OAUTH_URL: str = "https://accounts.google.com/o/oauth2/v2/auth"
+    GOOGLE_OAUTH_TOKEN_URL: str = "https://oauth2.googleapis.com/token"
+    GOOGLE_OAUTH_SCOPES: str = "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile"
+    OAUTH_DEFAULT_PASSWORD: str = "00000000"
+    OAUTH_TOKEN_ALGORITHM: str = "RS256"
+
     # compose cors allowed origins
     @property
     def ALLOWED_ORIGINS(self) -> list[str]:

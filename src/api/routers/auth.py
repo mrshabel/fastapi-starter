@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 from fastapi.security import OAuth2PasswordRequestForm
 from src.services import AuthService
 from src.models import user as user_models, Message
@@ -86,3 +86,59 @@ async def update_password_me(
     auth_service.update_password(id=current_user.sub, data=data)
 
     return Message(message="Password updated successfully")
+
+
+@router.post("/refresh", response_model=user_models.TokenRefreshResponse)
+async def refresh_client_token(
+    refresh_token: str,
+    current_user: CurrentUser,
+    auth_service: AuthServiceDep,
+):
+    """
+    Refresh user access token
+    """
+    access_token = await auth_service.refresh_session(refresh_token)
+
+    return user_models.TokenRefreshResponse(
+        message="Token refresh successful",
+        access_token=access_token,
+        refresh_token=refresh_token,
+    )
+
+
+@router.get("/{provider}/init", response_model=user_models.OAuthInitResponse)
+async def initiate_oauth_flow(
+    provider: user_models.OAuthProvider,
+    auth_service: AuthServiceDep,
+    origin: Annotated[str, Header()],
+):
+    """
+    Initiate OAuth flow with appropriate providers
+    """
+    url = auth_service.get_oauth_url(client_origin=origin, provider=provider)
+
+    # return url to redirect client to oauth server init page
+    return user_models.OAuthInitResponse(url=url)
+
+
+@router.get("/{provider}/callback", response_model=user_models.UserLoginResponse)
+async def handle_oauth_callback(
+    provider: user_models.OAuthProvider,
+    code: str,
+    state: str,
+    auth_service: AuthServiceDep,
+    origin: Annotated[str, Header()],
+):
+    """
+    Process callback from client and login user
+    """
+    user, access_token, refresh_token = await auth_service.handle_oauth(
+        code=code, provider=provider, client_origin=origin, state=state
+    )
+
+    return user_models.UserLoginResponse(
+        message="Login successfully",
+        data=user,
+        access_token=access_token,
+        refresh_token=refresh_token,
+    )

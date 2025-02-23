@@ -44,7 +44,7 @@ async def get_users(
     )
 
 
-@router.get("/me", response_model=user_models.UserPublic)
+@router.get("/me", response_model=user_models.UserPublicResponse)
 def get_user_me(current_user: CurrentUser, user_service: UserServiceDep):
     """
     Get current user.
