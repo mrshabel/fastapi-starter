@@ -82,7 +82,7 @@ async def get_user(
 )
 async def update_user(
     id: uuid.UUID,
-    data: user_models.UserUpdateMe,
+    data: user_models.UserUpdatePublic,
     user_service: UserServiceDep,
 ):
     """

@@ -1,2 +1,2 @@
-from .user import UserRepository
-from .item import ItemRepository
+from .user import UserRepository as UserRepository
+from .item import ItemRepository as ItemRepository

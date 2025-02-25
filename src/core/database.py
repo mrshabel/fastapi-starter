@@ -1,7 +1,9 @@
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import create_engine, Session, select
 from sqlalchemy import event
 from src.core.config import AppConfig
 from src.models import *  # noqa
+from src.models.user import UserCreate, User, UserRole
+from src.core.security import create_password_hash
 
 # disable strict single thread check
 connect_args = {"check_same_thread": False}
@@ -27,5 +29,26 @@ def configure_sqlite_connection(conn, record):
 
 
 def init_db():
-    # create tables
-    SQLModel.metadata.create_all(engine)
+    # TODO: move to a startup script
+    # ensure app super user exists on app startup
+    with Session(engine) as session:
+        try:
+            existing_superuser = session.exec(
+                select(User).where(User.email == AppConfig.SUPERUSER_EMAIL)
+            ).first()
+            if not existing_superuser:
+                user = User.model_validate(
+                    UserCreate(
+                        email=AppConfig.SUPERUSER_EMAIL,
+                        password=create_password_hash(AppConfig.SUPERUSER_PASSWORD),
+                        role=UserRole.SUPERUSER,
+                    )
+                )
+                # flush to db
+                session.add(user)
+                session.commit()
+                session.refresh(user)
+        except Exception:
+            # rollback transaction
+            session.rollback()
+            raise

@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     PROJECT_DESCRIPTION: str = "A FastAPI starter template for developing APIs"
     PROJECT_VERSION: str = "1.0.0"
     ENVIRONMENT: Environment = Environment.DEVELOPMENT
+    IS_DEVELOPMENT: bool = ENVIRONMENT == Environment.DEVELOPMENT
     # database
     DATABASE_URL: str
     DB_POOL_SIZE: int = 20
@@ -35,6 +36,23 @@ class Settings(BaseSettings):
     GOOGLE_OAUTH_SCOPES: str = "https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile"
     OAUTH_DEFAULT_PASSWORD: str = "00000000"
     OAUTH_TOKEN_ALGORITHM: str = "RS256"
+
+    # smtp details
+    SMTP_SERVER: str
+    SMTP_PORT: int
+    SMTP_USERNAME: str
+    SMTP_PASSWORD: str
+
+    # default superuser details
+    SUPERUSER_EMAIL: str
+    SUPERUSER_PASSWORD: str
+
+    # storage
+    LOCAL_STORAGE_PATH: str
+    AWS_BUCKET_NAME: str
+    AWS_ACCESS_KEY: str
+    AWS_SECRET_KEY: str
+    AWS_REGION: str
 
     # compose cors allowed origins
     @property

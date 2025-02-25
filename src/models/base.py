@@ -30,7 +30,7 @@ class BaseSearch(SQLModel):
         description="The date the record was created",
     )
 
-    model_config = ConfigDict(
+    model_config = ConfigDict(  # type: ignore
         alias_generator=to_camel,
         populate_by_name=True,
     )

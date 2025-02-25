@@ -37,7 +37,7 @@ class ExceptionHandlerMiddleware(BaseHTTPMiddleware):
                 },
             )
         except (IntegrityError, sqlite3.IntegrityError) as db_exception:
-            logger.error(f"Database Error: {str(db_exception)}")
+            logger.error(f"Database Error: {str(db_exception)}", exc_info=True)
 
             msg = parse_sqlite_integrity_error(db_exception)
             status = 500

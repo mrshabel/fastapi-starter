@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 # import all routes here
-from src.api.routers import health_check, item, user, auth
+from src.api.routers import health_check, item, user, auth, file
 
 api_router = APIRouter(
     responses={
@@ -18,3 +18,4 @@ api_router.include_router(health_check.router)
 api_router.include_router(item.router)
 api_router.include_router(user.router)
 api_router.include_router(auth.router)
+api_router.include_router(file.router)

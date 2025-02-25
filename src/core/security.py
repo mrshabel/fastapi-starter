@@ -2,6 +2,7 @@ import jwt
 import random
 import urllib.parse
 import hashlib
+import threading
 from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from src.core.config import AppConfig
@@ -151,13 +152,25 @@ def generate_otp(length: int = 6) -> tuple[str, datetime]:
 # external oauth
 # store all clients that have initiated the oauth flow with their ttl
 connected_oath_clients: dict[str, datetime] = {}
+lock = threading.Lock()
+
+# async def cleanup_stale_client_states():
+#     for state, ttl in connected_oath_clients.items():
+#         if ttl < datetime.now(timezone.utc):
+#             with lock:
+#                 connected_oath_clients.pop(state)
+
+# # run in background
+# loop = asyncio.get_running_loop()
+# loop.run_in_executor()
 
 
 def update_client_state(client_origin: str):
     ttl = datetime.now(timezone.utc) + timedelta(minutes=5)
     state = hashlib.sha256(client_origin.encode()).hexdigest()
-    # TODO: lock map with a mutex to ensure atomic writes
-    connected_oath_clients[state] = ttl
+    # lock map with a mutex to ensure atomic writes
+    with lock:
+        connected_oath_clients[state] = ttl
     return state
 
 

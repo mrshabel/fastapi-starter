@@ -1,9 +1,10 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from src.services import AuthService
 from src.models import user as user_models, Message
 from src.api.dependencies import SessionDep, CurrentUser
+from src.utils.mailer import send_email
 
 router = APIRouter(
     prefix="/auth",
@@ -24,13 +25,25 @@ AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 
 
 @router.post("/signup", response_model=user_models.UserPublicResponse, status_code=201)
-async def signup(data: user_models.UserRegister, auth_service: AuthServiceDep):
+async def signup(
+    data: user_models.UserRegister,
+    auth_service: AuthServiceDep,
+    background_tasks: BackgroundTasks,
+):
     """
     Create new user account
     """
     user = auth_service.signup(data)
 
-    # TODO: deliver email in background
+    # deliver email in background
+    recipient = user.email
+    subject = "Account Signup"
+    content = f"""
+    Hello {user.full_name if user.full_name else "there"},
+    Welcome to Shabel's world.
+    Made with love
+    """
+    background_tasks.add_task(send_email, recipient, subject, content)
     return user_models.UserPublicResponse(
         message="Signup completed successfully", data=user
     )

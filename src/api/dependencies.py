@@ -13,6 +13,8 @@ from src.core.exceptions import (
 )
 from src.core.security import decode_token
 from src.models.user import TokenPayload, UserRole
+from src.core.config import AppConfig
+from src.services import LocalStorageService, S3StorageService
 
 
 # database session dependency
@@ -64,3 +66,17 @@ def get_current_active_superuser(current_user: CurrentUser) -> TokenPayload:
         raise PermissionDeniedError("The user doesn't have enough privileges")
 
     return current_user
+
+
+# storage dependencies
+def get_storage_service() -> LocalStorageService | S3StorageService:
+    """Returns an instance of the underlying storage client"""
+    if AppConfig.IS_DEVELOPMENT:
+        return LocalStorageService()
+    else:
+        return S3StorageService()
+
+
+StorageServiceDep = Annotated[
+    LocalStorageService | S3StorageService, Depends(get_storage_service)
+]
