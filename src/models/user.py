@@ -7,6 +7,7 @@ from pydantic import ConfigDict
 from typing import TYPE_CHECKING
 from src.models.base import Base, BaseSearch
 from enum import StrEnum
+from datetime import datetime
 
 # this will escape runtime typechecking that results in circular imports.
 # it will be used to import and declare stringified type annotations only
@@ -41,10 +42,13 @@ class UserBase(SQLModel):
     )
     role: str = Field(title="Role", description="Role of the user", max_length=255)
     full_name: str | None = Field(
-        title="Full Name", description="The user's fullname", max_length=255
+        title="Full Name",
+        description="The user's fullname",
+        max_length=255,
+        default=None,
     )
 
-    model_config = ConfigDict(
+    model_config = ConfigDict(  # type: ignore
         alias_generator=to_camel,
         populate_by_name=True,
     )
@@ -52,7 +56,7 @@ class UserBase(SQLModel):
 
 # Database model, database table inferred from class name
 class User(Base, UserBase, table=True):
-    __tablename__ = "users"
+    __tablename__ = "users"  # type: ignore
 
     password: str
 
@@ -85,7 +89,7 @@ class UserRegister(SQLModel):
         max_length=255,
     )
 
-    model_config = ConfigDict(
+    model_config = ConfigDict(  # type: ignore
         alias_generator=to_camel,
         populate_by_name=True,
     )
@@ -107,7 +111,7 @@ class UserSearch(BaseSearch):
         title="Full Name", description="The user's fullname", default=None
     )
 
-    model_config = ConfigDict(
+    model_config = ConfigDict(  # type: ignore
         alias_generator=to_camel,
         populate_by_name=True,
     )
@@ -131,7 +135,7 @@ class UserUpdate(SQLModel):
     )
     role: str | None = Field(title="Role", description="Role of the user", default=None)
 
-    model_config = ConfigDict(
+    model_config = ConfigDict(  # type: ignore
         alias_generator=to_camel,
         populate_by_name=True,
     )
@@ -145,14 +149,21 @@ class UserUpdateMe(SQLModel):
         title="Email", description="Email Address of the user", default=None
     )
 
-    model_config = ConfigDict(
+    model_config = ConfigDict(  # type: ignore
         alias_generator=to_camel,
         populate_by_name=True,
     )
 
 
 class UserUpdatePublic(SQLModel):
-    pass
+    full_name: str | None = Field(
+        title="Full Name", description="The user's fullname", default=None
+    )
+
+    model_config = ConfigDict(  # type: ignore
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
 
 
 class UserLogin(SQLModel):
@@ -174,7 +185,7 @@ class UpdatePassword(SQLModel):
         max_length=40,
     )
 
-    model_config = ConfigDict(
+    model_config = ConfigDict(  # type: ignore
         alias_generator=to_camel,
         populate_by_name=True,
     )
@@ -183,6 +194,12 @@ class UpdatePassword(SQLModel):
 # Properties to return via API, id is always required
 class UserPublic(UserBase):
     id: uuid.UUID = Field(title="ID", description="ID of the user record")
+    created_at: datetime = Field(
+        title="created_at", description="The date and time the user record was created"
+    )
+    updated_at: datetime = Field(
+        title="updated_at", description="The date and time the user record was updated"
+    )
 
 
 class UsersPublic(SQLModel):
@@ -237,7 +254,7 @@ class NewPassword(SQLModel):
         min_length=8,
     )
 
-    model_config = ConfigDict(
+    model_config = ConfigDict(  # type: ignore
         alias_generator=to_camel,
         populate_by_name=True,
     )

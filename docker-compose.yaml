@@ -3,9 +3,11 @@ services:
         container_name: fastapi-starter-api
         build: .
         ports:
-            - 8000:80
+            - 8000:8000
         volumes:
-            - ./data:/app/data
+            - ./data:/mnt/data
+        env_file:
+            - .env.docker
         healthcheck:
             # ping application with curl fast-fail
             test: ["CMD", "curl", "-f", "http://localhost:8000/health-check"]

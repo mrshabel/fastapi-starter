@@ -2,7 +2,8 @@ services:
     api:
         container_name: fastapi-starter-api
         build: .
-        command: ["fastapi", "dev", "src/main.py"]
+        # TODO: move pre-startup scripts to an ephemeral container
+        command: bash -c "alembic upgrade head && fastapi dev --host 0.0.0.0 src/main.py"
         healthcheck:
             # ping application with curl fast-fail
             test: ["CMD", "curl", "-f", "http://localhost:8000/health-check"]
@@ -13,9 +14,10 @@ services:
         ports:
             - 8000:8000
         volumes:
-            - ./data:/app/data
+            - ./data:/mnt/data
+            - .src/alembic:/app/src/alembic
         env_file:
-            - .env
+            - .env.docker
         develop:
             watch:
                 # Sync the working directory with the `/app` directory in the container
@@ -25,7 +27,8 @@ services:
                   # Exclude the project virtual environment
                   ignore:
                       - .venv/
-                      - __pycache__/
+                        - *__pycache__
+                        - *.pyc
 
                 # Rebuild the image on changes to the `pyproject.toml`
                 - action: rebuild

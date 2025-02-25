@@ -16,13 +16,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --frozen --no-install-project --no-dev
 
-# copy application code
-COPY ./pyproject.toml ./uv.lock /app/
-COPY ./src /app/src
-# ADD . /app
-
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
+
+# copy application code
+COPY ./src /app/src
+# copy config scripts and specifications
+COPY ./pyproject.toml ./uv.lock ./alembic.ini /app/
 
 
 # Then, use a final image without uv
@@ -37,4 +37,4 @@ COPY --from=builder --chown=app:app /app /app
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Run the FastAPI application by default. TODO: add workers flag
-CMD fastapi run src/main.py
+CMD fastapi run --host 0.0.0.0 src/main.py

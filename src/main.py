@@ -1,5 +1,6 @@
 import time
 from fastapi import FastAPI, Request
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.logger import logger
 from fastapi.exceptions import RequestValidationError
@@ -8,7 +9,6 @@ from contextlib import asynccontextmanager
 from src.core.config import AppConfig
 
 from src.core.database import init_db
-from src.core.config import Environment
 from src.api.main import api_router
 from src.api.middleware import (
     ExceptionHandlerMiddleware,
@@ -17,10 +17,8 @@ from src.api.middleware import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # TODO: move db bootstrap scripts to alembic
     init_db()
     yield
-    logger.info("shutting down...")
 
 
 app = FastAPI(
@@ -28,10 +26,15 @@ app = FastAPI(
     title=AppConfig.PROJECT_TITLE,
     summary=AppConfig.PROJECT_DESCRIPTION,
     version=AppConfig.PROJECT_VERSION,
-    docs_url="/docs" if AppConfig.ENVIRONMENT == Environment.DEVELOPMENT else None,
-    redoc_url="/redoc" if AppConfig.ENVIRONMENT == Environment.DEVELOPMENT else None,
+    docs_url="/docs" if AppConfig.IS_DEVELOPMENT else None,
+    redoc_url="/redoc" if AppConfig.IS_DEVELOPMENT else None,
 )
 
+# create mount point in development
+if AppConfig.IS_DEVELOPMENT:
+    # TODO: authorize static file access. https://github.com/fastapi/fastapi/issues/858#issuecomment-876564020
+    # alias the path name as /public
+    app.mount("/public", StaticFiles(directory=AppConfig.LOCAL_STORAGE_PATH), "uploads")
 
 # declare cors middleware
 app.add_middleware(
@@ -60,14 +63,17 @@ app.add_middleware(ExceptionHandlerMiddleware)
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Custom exception handler for all request validation errors"""
+    logger.error("Data validation error occurred")
     return JSONResponse(status_code=422, content={"message": exc.errors()})
 
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Custom exception handler for all uncaught exceptions"""
-    # logger.exception("Fatal. Unhandled exception occurred", exc_info=True)
-    return JSONResponse(status_code=500, content={"message": "Internal Server Error"})
+    logger.exception("Fatal. Unhandled exception occurred", exc_info=True)
+    return JSONResponse(
+        status_code=500, content={"message": "An unexpected error occurred"}
+    )
 
 
 # register all routes

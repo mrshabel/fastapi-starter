@@ -1,5 +1,5 @@
 from src.models.user import UserCreate, User, UserUpdate
-from sqlmodel import select, func, Session, update
+from sqlmodel import select, func, Session, update, col
 from uuid import UUID
 
 
@@ -51,20 +51,20 @@ class UserRepository:
 
         users = self.session.exec(query).all()
 
-        return users, count
+        return list(users), count
 
     def update(self, id: UUID, data: UserUpdate) -> User | None:
         """Update user by id"""
         # remove default field values
         query = (
             update(User)
-            .where(User.id == id)
+            .where(col(User.id) == id)
             .values(**data.model_dump(exclude_unset=True))
             .returning(User)
         )
 
         # flush to db
-        result = self.session.exec(query).first()
+        result = self.session.exec(query).first()  # type: ignore
         # extract returned row from tuple
         user = result[0]
         self.session.commit()

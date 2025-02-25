@@ -3,6 +3,7 @@ import uuid
 from sqlmodel import Field, Relationship, SQLModel
 from pydantic.alias_generators import to_camel
 from pydantic import ConfigDict
+from datetime import datetime
 
 # import related entities
 from src.models.user import User
@@ -21,7 +22,7 @@ class ItemBase(SQLModel):
         max_length=255,
     )
 
-    model_config = ConfigDict(
+    model_config = ConfigDict(  # type: ignore
         alias_generator=to_camel,
         populate_by_name=True,
     )
@@ -29,14 +30,14 @@ class ItemBase(SQLModel):
 
 # Database model, database table inferred from class name
 class Item(Base, ItemBase, table=True):
-    __tablename__ = "items"
+    __tablename__ = "items"  # type: ignore
 
     user_id: uuid.UUID = Field(
         foreign_key="users.id", nullable=False, ondelete="CASCADE"
     )
 
     # declare relationship
-    user: User | None = Relationship(back_populates="items")
+    user: User = Relationship(back_populates="items")
 
 
 # Properties to receive on item creation
@@ -79,6 +80,12 @@ class ItemUpdate(ItemBase):
 class ItemPublic(ItemBase):
     id: uuid.UUID = Field(title="ID", description="ID of the item record")
     user_id: uuid.UUID = Field(title="ID", description="ID of the user record")
+    created_at: datetime = Field(
+        title="created_at", description="The date and time the item was created"
+    )
+    updated_at: datetime = Field(
+        title="updated_at", description="The date and time the item was updated"
+    )
 
 
 class ItemsPublic(SQLModel):

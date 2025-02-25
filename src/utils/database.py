@@ -62,4 +62,4 @@ def parse_sqlite_integrity_error(e: sqlite3.IntegrityError) -> str:
         return "The provided data violates a check constraint."
 
     # return default response
-    return "A database integrity error occurred."
+    return "An unexpected error occurred."

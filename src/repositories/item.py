@@ -1,5 +1,5 @@
 from src.models.item import ItemCreate, Item, ItemUpdate
-from sqlmodel import select, func, Session, delete, update
+from sqlmodel import select, func, Session, delete, update, col
 from uuid import UUID
 
 
@@ -39,20 +39,20 @@ class ItemRepository:
 
         items = self.session.exec(query).all()
 
-        return items, count
+        return list(items), count
 
     def update(self, id: UUID, data: ItemUpdate) -> Item | None:
         """Update item by id"""
         # remove unset fields
         query = (
             update(Item)
-            .where(Item.id == id)
+            .where(col(Item.id) == id)
             .values(**data.model_dump(exclude_unset=True))
             .returning(Item)
         )
 
         # flush to db
-        result = self.session.exec(query).first()
+        result = self.session.exec(query).first()  # type: ignore
         # extract returned row from tuple
         item = result[0]
         self.session.commit()
@@ -61,10 +61,10 @@ class ItemRepository:
 
     def delete(self, id: UUID) -> bool:
         """Delete item by id"""
-        query = delete(Item).where(Item.id == id).returning(Item.id)
+        query = delete(Item).where(col(Item.id) == id).returning(Item.id)  # type: ignore
 
         # flush to db
-        # TODO: return only number of affected rows
+        # return only number of affected rows
         result = self.session.exec(query).first()
         self.session.commit()
 
