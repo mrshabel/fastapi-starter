@@ -1,17 +1,10 @@
-# 🚀 FastAPI Production Starter
+# 🚀 FastAPI Starter
 
-Bored out of countless hours spent repeatedly setting up new projects, this template is my solution to the "not another project setup" syndrome. It's a carefully crafted FastAPI starter that comes with everything you need to go from idea to production, without the usual headaches.
+This repo contains are starter template for FastAPI applications. The project structure may feel a bit opionionated where it matters, but it's flexible enough and follows the repository pattern.
 
-## 💡 Why This Template?
+## 💡Motivation
 
-Ever found yourself:
-
--   Spending days setting up the same project structure... again?
--   Copying authentication code from your last project?
--   Wondering about the "right way" to structure your FastAPI app?
--   Needing to add monitoring but not sure where to start?
-
-Yeah, me too. That's exactly why this template exists. It's opinionated where it matters, flexible where you need it, and comes with batteries included.
+I found myself spending countless hours to setup my FastAPI projects over and over again whenever i needed to run a production-grade application. Authentication, Databases, and other features became a pain to repeatedly setup so I decided to create this template to take away the effort and time wasted.
 
 ## 📌 Features
 
@@ -19,7 +12,7 @@ Yeah, me too. That's exactly why this template exists. It's opinionated where it
 -   **🔑 OAuth Authentication** – Google login included, extendable to other providers
 -   **📄 Auto-generated OpenAPI Docs** – `/docs` and `/redoc`
 -   **📦 Docker Support** – Preconfigured `Dockerfile` & `docker-compose`
--   **🗄️ SQLModel ORM** – A hybrid of SQLAlchemy and Pydantic
+-   **🗄️ SQLModel ORM** – A hybrid of SQLAlchemy and Pydantic, all your models and schemas as one entity
 -   **🛠️ Background Tasks** – Async task execution support
 -   **🔒 JWT-Based Authentication** – Secure access control
 -   **✅ Pre-configured Linting & Formatting** – Uses `ruff`
@@ -80,13 +73,19 @@ pre-commit install
 
 **Why?** This ensures comprehensive checks **before commits** to maintain code quality.
 
-### 5️⃣ Start the Application
+### 5️⃣ Generate Self-Signed Certificates
+
+```bash
+make certs
+```
+
+### 6️⃣ Start the Application
 
 ```sh
 ./run.sh
 ```
 
-### 6️⃣ Access API Documentation
+### 7️⃣ Access API Documentation
 
 -   📜 OpenAPI: [http://localhost:8000/docs](http://localhost:8000/docs)
 -   📜 Redoc: [http://localhost:8000/redoc](http://localhost:8000/redoc)
@@ -109,37 +108,21 @@ git push -u origin main
 The `items` endpoints serve as a **base template for all CRUD-like entities** . To add a new resource, simply:
 
 1. **Copy the `items` endpoints**
-2. **Modify the entity model & schema**
-3. **Adjust the repository logic**
+2. **Modify the entity models**
+3. **Adjust the repository and service logic**
+4. **Register the endpoint in the base router**
 
 This ensures consistency across all API resources while reducing development time.
 
-### Base CRUD Endpoints
+### 🔑 Authentication
 
--   **POST** `/items/` – Create a new entity
--   **GET** `/items/` – Retrieve all entities
--   **GET** `/items/{id}/` – Retrieve a single entity by ID
--   **PATCH** `/items/{id}/` – Update an entity
--   **DELETE** `/items/{id}/` – Delete an entity
-
-## 🔑 Authentication
-
-### OAuth2 Login (Google & Other Providers)
-
--   **Google OAuth support is built-in** and **easily extensible** to other providers.
--   Supports **OAuth2 Authorization Code Flow** .
-
-#### Authentication Endpoints
+### Authentication Endpoints
 
 -   **POST** `/auth/signup` – Register a new user
 -   **POST** `/auth/login` – Log in to get a JWT token
 -   **POST** `/auth/login/access-token` – Get OAuth access token
--   **GET** `/auth/{provider}/init` – Initiate OAuth login with Google or another provider
--   **GET** `/auth/{provider}/callback` – Handle OAuth callback
-
-#### Extending OAuth to New Providers
-
-To add a new provider (e.g., GitHub, Facebook, etc.), modify the `OAuthProvider` schema and update the authentication flow in the **auth service** .
+-   **GET** `/auth/{provider}/init` – Initiate OAuth login with Google or another provider. Visit OAuth provider developer page to obtain details.
+-   **GET** `/auth/{provider}/callback` – Handle OAuth callback. Set callback url to `https://`
 
 ## 🐳 Running with Docker
 
@@ -158,23 +141,20 @@ ruff check --fix
 ruff format
 ```
 
-## 🎯 Contributing
+## Deployment
 
-1. **Fork the repository**
-2. **Create a feature branch** (`git checkout -b feature/feature-name`)
-3. **Commit changes** (`git commit -m "feat: add feature"`)
-4. **Push to branch** (`git push origin feature/feature-name`)
-5. **Open a Pull Request**
+### Nginx Setup
 
-## 🔮 Future Updates
+1. Generate ssl certificates with a trusted certificates authority or use a self-signed certificate by running the oppenssl command below
 
-| Feature Proposal          | Status         |
-| ------------------------- | -------------- |
-| API Gateway support       | ⏳ In Progress |
-| IaC support               | 🚀 Planned     |
-| Async task queue (Celery) | ⏳ In Progress |
-| Tests support             | ⏳ In Progress |
+    ```sh
+    openssl req -x509 -noenc -days 365 -newkey rsa:2048 -keyout nginx/certs/server.key -out nginx/certs/server.crt
+    ```
 
-## 📜 License
+    The certificates will be generated and placed in the `nginx` directory. However, place these in the `/etc/ssl` directory during deployment.
 
-This project is licensed under the **MIT License**
+2. Uncomment the line that rewrites the http request to port 8443 since it wont be needed in production.
+3. Copy the nginx configuration to `/etc/nginx/sites-available` to run the nginx server.
+   `NB: this stressful configuration won't really be needed after integrating an IaaC tool, lol😅`
+
+Get to know more about ssl certificates [here](https://www.digitalocean.com/community/tutorials/how-to-create-a-self-signed-ssl-certificate-for-nginx-in-ubuntu-20-04-1 "Creating Self-Signed Certificates").

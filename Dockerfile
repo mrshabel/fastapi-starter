@@ -16,13 +16,15 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --frozen --no-install-project --no-dev
 
+# copy config scripts and specifications
+COPY ./pyproject.toml ./uv.lock /app/
+
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
 # copy application code
 COPY ./src /app/src
-# copy config scripts and specifications
-COPY ./pyproject.toml ./uv.lock ./alembic.ini /app/
+COPY ./alembic.ini /app/
 
 
 # Then, use a final image without uv

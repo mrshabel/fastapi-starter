@@ -8,6 +8,7 @@ dependencies = [
     "aiosqlite>=0.21.0",
     "alembic>=1.14.1",
     "boto3>=1.36.26",
+    "celery[redis]>=5.4.0",
     "fastapi[standard]>=0.115.8",
     "passlib[bcrypt]>=1.7.4",
     "pydantic-settings>=2.7.1",
