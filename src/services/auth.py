@@ -35,17 +35,17 @@ from src.core.security import (
     check_client_state,
 )
 from pydantic import UUID4
-from sqlmodel import Session
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 class AuthService:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: AsyncSession) -> None:
         self.user_repository = UserRepository(session=session)
 
-    def signup(self, data: UserRegister):
+    async def signup(self, data: UserRegister):
         """Create a new user account"""
         # check if user exists in system
-        existing_user = self.user_repository.get_by_email(email=data.email)
+        existing_user = await self.user_repository.get_by_email(email=data.email)
         if existing_user:
             raise BadActionError("User already exists in the system")
 
@@ -54,10 +54,10 @@ class AuthService:
         data.password = hashed_password
 
         user_data = UserCreate(**vars(data), role=UserRole.USER)
-        user = self.user_repository.create(data=user_data)
+        user = await self.user_repository.create(data=user_data)
         return user
 
-    def login(self, data: UserLogin):
+    async def login(self, data: UserLogin):
         """Login to a user account
 
         Args:
@@ -66,7 +66,7 @@ class AuthService:
         Returns:
             tuple[user, access_token, refresh_token]
         """
-        user = self.user_repository.get_by_email(email=data.email)
+        user = await self.user_repository.get_by_email(email=data.email)
         if not user:
             raise NotFoundError("User does not exist in the system")
 
@@ -79,9 +79,9 @@ class AuthService:
         refresh_token = create_access_token(token_data)
         return user, access_token, refresh_token
 
-    def login_access_token(self, data: OAuth2PasswordRequestForm):
+    async def login_access_token(self, data: OAuth2PasswordRequestForm):
         """Login to a user account for an OAuth access token"""
-        user = self.user_repository.get_by_email(email=data.username)
+        user = await self.user_repository.get_by_email(email=data.username)
         if not user:
             raise NotFoundError("User does not exist in the system")
 
@@ -102,18 +102,20 @@ class AuthService:
         access_token = create_access_token(data)
         return access_token
 
-    def deactivate_account(self, id: UUID4, role: UserRole):
+    async def deactivate_account(self, id: UUID4, role: UserRole):
         """Update user details"""
         # prevent superusers from disabling their accounts
         if role == UserRole.SUPERUSER:
             raise PermissionError("Superusers are not allowed to delete themselves")
 
-        user = self.user_repository.update(id=id, data=UserUpdate(is_active=False))
+        user = await self.user_repository.update(
+            id=id, data=UserUpdate(is_active=False)
+        )
         return user
 
-    def update_password(self, id: UUID4, data: UpdatePassword):
+    async def update_password(self, id: UUID4, data: UpdatePassword):
         """Update user account password"""
-        user = self.user_repository.get_by_id(id=id)
+        user = await self.user_repository.get_by_id(id=id)
         if not user:
             raise NotFoundError("Password cannot be updated at this time")
 
@@ -125,7 +127,7 @@ class AuthService:
 
         return updated_user
 
-    def get_oauth_url(self, client_origin: str, provider: OAuthProvider):
+    async def get_oauth_url(self, client_origin: str, provider: OAuthProvider):
         # compose url and state from client origin
         # write state to an external structure
         state = update_client_state(client_origin=client_origin)
@@ -184,9 +186,9 @@ class AuthService:
             raise BadActionError("Failed to retrieve user details")
 
         # check if user already exists in system
-        user = self.user_repository.get_by_email(email=user_data.email)
+        user = await self.user_repository.get_by_email(email=user_data.email)
         if not user:
-            user = self.user_repository.create(user_data)
+            user = await self.user_repository.create(user_data)
 
         # create tokens
         token_data = TokenPayload(sub=user.id, role=user.role)

@@ -37,7 +37,7 @@ async def get_users(
     """
     Get all user records
     """
-    data = user_service.get_all_users(skip=skip, limit=limit, query=query)
+    data = await user_service.get_all_users(skip=skip, limit=limit, query=query)
 
     return user_models.UsersPublicResponse(
         **vars(data), message="Users retrieved successfully"
@@ -45,11 +45,11 @@ async def get_users(
 
 
 @router.get("/me", response_model=user_models.UserPublicResponse)
-def get_user_me(current_user: CurrentUser, user_service: UserServiceDep):
+async def get_user_me(current_user: CurrentUser, user_service: UserServiceDep):
     """
     Get current user.
     """
-    user = user_service.get_user_by_id(id=current_user.sub)
+    user = await user_service.get_user_by_id(id=current_user.sub)
 
     return user_models.UserPublicResponse(
         message="Current user details retrieved successfully",
@@ -68,7 +68,7 @@ async def get_user(
     """
     Get a user record
     """
-    user = user_service.get_user_by_id(id=id)
+    user = await user_service.get_user_by_id(id=id)
 
     return user_models.UserPublicResponse(
         message="User retrieved successfully",
@@ -88,7 +88,7 @@ async def update_user(
     """
     Update a user record
     """
-    user = user_service.update_user_by_id(id=id, data=data)
+    user = await user_service.update_user_by_id(id=id, data=data)
 
     return user_models.UserPublicResponse(
         message="User updated successfully",

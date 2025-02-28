@@ -10,6 +10,7 @@ router = APIRouter(prefix="/health-check", tags=["Health Check Endpoint"])
 async def check_health(session: SessionDep):
     """Check application health"""
     # execute test query to db
-    session.exec(select(1)).first()
+    result = await session.exec(select(1))
+    result.first()
 
     return SystemHealth(status="healthy", database="connected")

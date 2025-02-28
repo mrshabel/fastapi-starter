@@ -35,7 +35,7 @@ async def add_one_item(
     """
     Create new item record
     """
-    item = item_service.create_item(data)
+    item = await item_service.create_item(data)
 
     return item_models.ItemPublicResponse(
         message="Item created successfully", data=item
@@ -52,7 +52,7 @@ async def get_all_items(
     """
     Get all item records
     """
-    data = item_service.get_all_items(skip=skip, limit=limit, query=query)
+    data = await item_service.get_all_items(skip=skip, limit=limit, query=query)
 
     return item_models.ItemsPublicResponse(
         **vars(data), message="Items retrieved successfully"
@@ -64,7 +64,7 @@ async def get_one_item_by_id(id: UUID, item_service: ItemServiceDep):
     """
     Get one item by id
     """
-    item = item_service.get_item_by_id(id=id)
+    item = await item_service.get_item_by_id(id=id)
 
     return item_models.ItemPublicResponse(
         message="Item retrieved successfully", data=item
@@ -80,7 +80,7 @@ async def update_one_item_by_id(
     """
     Update item record by id
     """
-    item = item_service.update_item_by_id(id, data)
+    item = await item_service.update_item_by_id(id, data)
 
     return item_models.ItemPublicResponse(
         message="Item updated successfully", data=item
@@ -95,6 +95,6 @@ async def delete_one_item_by_id(
     """
     Deleted item record by id.
     """
-    item_service.delete_item_by_id(id)
+    await item_service.delete_item_by_id(id)
 
     return Message(message="Item deleted successfully")

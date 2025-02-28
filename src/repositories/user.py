@@ -1,59 +1,64 @@
 from src.models.user import UserCreate, User, UserUpdate
-from sqlmodel import select, func, Session, update, col
+from sqlmodel import select, func, update, col
+from sqlmodel.ext.asyncio.session import AsyncSession
 from uuid import UUID
 
 
 class UserRepository:
-    def __init__(self, session: Session) -> None:
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    def create(self, data: UserCreate) -> User:
+    async def create(self, data: UserCreate) -> User:
         """Create new user"""
         # create instance of user
         user = User.model_validate(data)
         # flush to db
         self.session.add(user)
-        self.session.commit()
-        self.session.refresh(user)
+        await self.session.commit()
+        await self.session.refresh(user)
 
         return user
 
-    def save(self, data: User) -> User:
+    async def save(self, data: User) -> User:
         """Save an instance user. This method is mostly used when the user instance is first retrieved in previous queries to avoid redundant query on update"""
         # flush to db
         self.session.add(data)
-        self.session.commit()
-        self.session.refresh(data)
+        await self.session.commit()
+        await self.session.refresh(data)
 
         return data
 
-    def get_by_id(self, id: UUID) -> User | None:
+    async def get_by_id(self, id: UUID) -> User | None:
         """Get one user by id"""
         # query = select(User).where(User.id == id)
-        user = self.session.get(User, id)
+        user = await self.session.get(User, id)
         return user
 
-    def get_by_email(self, email: str) -> User | None:
+    async def get_by_email(self, email: str) -> User | None:
         """Get one user by email"""
         query = select(User).where(User.email == email)
-        user = self.session.exec(query).first()
-        return user
+        user = await self.session.exec(query)
+        return user.first()
 
-    def get_all(self, skip: int, limit: int, filters: list) -> tuple[list[User], int]:
+    async def get_all(
+        self, skip: int, limit: int, filters: list
+    ) -> tuple[list[User], int]:
         """Get all paginated user records"""
         count_query = select(func.count()).select_from(User)
-        count = self.session.exec(count_query).one()
+        result = await self.session.exec(count_query)
+        count = result.one()
 
         query = select(User).offset(skip).limit(limit)
         # build filter
         for clause in filters:
             query = query.where(clause)
 
-        users = self.session.exec(query).all()
+        results = await self.session.exec(query)
+        users = results.all()
 
         return list(users), count
 
-    def update(self, id: UUID, data: UserUpdate) -> User | None:
+    async def update(self, id: UUID, data: UserUpdate) -> User | None:
         """Update user by id"""
         # remove default field values
         query = (
@@ -64,9 +69,9 @@ class UserRepository:
         )
 
         # flush to db
-        result = self.session.exec(query).first()  # type: ignore
+        result = await self.session.exec(query)  # type: ignore
         # extract returned row from tuple
-        user = result[0]
-        self.session.commit()
+        user = result.first()[0]
+        await self.session.commit()
 
         return user

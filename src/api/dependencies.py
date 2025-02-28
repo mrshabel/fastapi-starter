@@ -1,11 +1,12 @@
-from collections.abc import Generator
+from collections.abc import AsyncGenerator
 from typing import Annotated
 
 import jwt
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import ValidationError
-from sqlmodel import Session
+from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy.orm import sessionmaker
 
 from src.core.database import engine
 from src.core.exceptions import (
@@ -18,20 +19,19 @@ from src.services import LocalStorageService, S3StorageService
 
 
 # database session dependency
-def get_db() -> Generator[Session, None, None]:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Get the db session"""
-    with Session(engine) as session:
+    Session = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)  # type: ignore
+    async with Session.begin() as session:  # type: ignore
         try:
             yield session
-            # commit transaction
-            session.commit()
         except Exception:
             # rollback transaction
-            session.rollback()
+            await session.rollback()
             raise
 
 
-SessionDep = Annotated[Session, Depends(get_db)]
+SessionDep = Annotated[AsyncSession, Depends(get_db)]
 
 
 # token dependency

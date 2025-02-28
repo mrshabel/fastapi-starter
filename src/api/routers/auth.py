@@ -33,7 +33,7 @@ async def signup(
     """
     Create new user account
     """
-    user = auth_service.signup(data)
+    user = await auth_service.signup(data)
 
     # deliver email in background
     recipient = user.email
@@ -54,7 +54,7 @@ async def login(data: user_models.UserLogin, auth_service: AuthServiceDep):
     """
     Login to a user account
     """
-    user, access_token, refresh_token = auth_service.login(data)
+    user, access_token, refresh_token = await auth_service.login(data)
 
     return user_models.UserLoginResponse(
         message="Login successfully",
@@ -72,7 +72,7 @@ async def login_access_token(
     """
     Login to a user account for an oauth access token
     """
-    access_token = auth_service.login_access_token(data)
+    access_token = await auth_service.login_access_token(data)
 
     return user_models.Token(access_token=access_token)
 
@@ -82,7 +82,7 @@ async def deactivate_account(current_user: CurrentUser, auth_service: AuthServic
     """
     Delete own user
     """
-    auth_service.deactivate_account(id=current_user.sub, role=current_user.role)
+    await auth_service.deactivate_account(id=current_user.sub, role=current_user.role)
 
     return Message(message="Account deactivated successfully")
 
@@ -96,7 +96,7 @@ async def update_password_me(
     """
     Update user's own password
     """
-    auth_service.update_password(id=current_user.sub, data=data)
+    await auth_service.update_password(id=current_user.sub, data=data)
 
     return Message(message="Password updated successfully")
 
@@ -128,7 +128,7 @@ async def initiate_oauth_flow(
     """
     Initiate OAuth flow with appropriate providers
     """
-    url = auth_service.get_oauth_url(client_origin=origin, provider=provider)
+    url = await auth_service.get_oauth_url(client_origin=origin, provider=provider)
 
     # return url to redirect client to oauth server init page
     return user_models.OAuthInitResponse(url=url)
