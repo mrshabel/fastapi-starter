@@ -19,6 +19,17 @@ services:
             retries: 5
             start_period: 30s
 
+    startup:
+        # ephemeral container for running startup scripts
+        container_name: fastapi-starter-startup
+        build: .
+        image: fastapi-starter-api
+        command: bash -c "alembic upgrade head && python -m src.scripts.seed"
+        env_file:
+            - .env.docker
+        volumes:
+            - ./data:/mnt/data
+
     redis:
         container_name: fastapi-starter-redis
         image: redis:7-alpine

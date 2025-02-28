@@ -18,3 +18,8 @@ certs:
 	# you can change the location to output the certificates
 	@echo "Generating Self-Signed Certificates..."
 	openssl req -x509 -noenc -days 365 -newkey rsa:2048 -keyout nginx/certs/server.key -out nginx/certs/server.crt
+
+startup:
+	@echo "Running startup scripts"
+	python3 -m src.scripts.seed
+	@echo "Data seeding complete"

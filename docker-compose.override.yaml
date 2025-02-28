@@ -2,7 +2,7 @@ services:
     api:
         container_name: fastapi-starter-api
         build: .
-        # TODO: move pre-startup scripts to an ephemeral container
+        image: fastapi-starter-api
         command: bash -c "alembic upgrade head && fastapi dev --host 0.0.0.0 src/main.py"
         healthcheck:
             # ping application with curl fast-fail
@@ -16,9 +16,10 @@ services:
         depends_on:
             - nginx
             - redis
+            - startup
         volumes:
             - ./data:/mnt/data
-            - ./src/alembic:/app/src/alembic
+            - ./src/migrations:/app/src/migrations
         env_file:
             - .env.docker
         develop:
@@ -36,6 +37,17 @@ services:
                 # Rebuild the image on changes to the `pyproject.toml`
                 - action: rebuild
                   path: ./pyproject.toml
+
+    startup:
+        # ephemeral container for running startup scripts
+        container_name: fastapi-starter-startup
+        build: .
+        image: fastapi-starter-api
+        command: bash -c "alembic upgrade head && python -m src.scripts.seed"
+        env_file:
+            - .env.docker
+        volumes:
+            - ./data:/mnt/data
 
     redis:
         container_name: fastapi-starter-redis
