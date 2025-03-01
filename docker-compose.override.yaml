@@ -3,7 +3,7 @@ services:
         container_name: fastapi-starter-api
         build: .
         image: fastapi-starter-api
-        command: bash -c "alembic upgrade head && fastapi dev --host 0.0.0.0 src/main.py"
+        command: fastapi dev --host 0.0.0.0 src/main.py
         healthcheck:
             # ping application with curl fast-fail
             test: ["CMD", "curl", "-f", "http://localhost:8000/health-check"]
@@ -14,26 +14,20 @@ services:
         ports:
             - 8000:8000
         depends_on:
-            - nginx
-            - redis
-            - startup
+            redis:
+                condition: service_started
+            startup:
+                condition: service_completed_successfully
         volumes:
             - ./data:/mnt/data
-            - ./src/migrations:/app/src/migrations
+            - ./src:/app/src
+            # - ./src/migrations:/app/src/migrations
         env_file:
             - .env.docker
+        networks:
+            - fastapi_starter_network
         develop:
             watch:
-                # Sync the working directory with the `/app` directory in the container
-                - action: sync
-                  path: ./src
-                  target: /app/src
-                  # Exclude the project virtual environment
-                  ignore:
-                      - .venv/
-                        - *__pycache__
-                        - *.pyc
-
                 # Rebuild the image on changes to the `pyproject.toml`
                 - action: rebuild
                   path: ./pyproject.toml
@@ -46,22 +40,71 @@ services:
         command: bash -c "alembic upgrade head && python -m src.scripts.seed"
         env_file:
             - .env.docker
+        networks:
+            - fastapi_starter_network
         volumes:
-            - ./data:/mnt/data
+            - data:/mnt/data
 
-    redis:
-        container_name: fastapi-starter-redis
-        image: redis:7-alpine
+    worker:
+        container_name: fastapi-starter-worker
+        build: .
+        image: fastapi-starter-api
+        command: celery --app src.tasks.main.celery_app worker --loglevel=INFO
+        env_file:
+            - .env.docker
         depends_on:
-            - nginx
+            - redis
+        networks:
+            - fastapi_starter_network
+        volumes:
+            - ./src:/app/src
+        develop:
+            watch:
+                # - action: sync
+                #   path: ./src/
+                #   target: /app/src/
+
+                # restart worker to detect and reimport new tasks
+                - action: sync+restart
+                  path: ./src/tasks
+                  target: /app/src/tasks
+
+    worker-dashboard:
+        # image: mher/flower
+        container_name: fastapi-starter-worker-dashboard
+        build: .
+        image: fastapi-starter-api
+        command: celery --app src.tasks.main.celery_app flower
+        ports:
+            - 5555:5555
+        env_file:
+            - .env.docker
+        depends_on:
+            - redis
+            - worker
+        volumes:
+            - ./src:/app/src
+        networks:
+            - fastapi_starter_network
 
     nginx:
         container_name: fastapi-starter-nginx
         image: nginx
         ports:
             # listen to http and https traffic
-            - 8080:80
-            - 8443:443
+            - 8080:8080
+            - 8443:8443
         volumes:
-            - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+            - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf
             - ./nginx/certs:/etc/ssl
+        networks:
+            - fastapi_starter_network
+        depends_on:
+            - api
+
+volumes:
+    data:
+
+networks:
+    fastapi_starter_network:
+        driver: bridge

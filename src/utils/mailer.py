@@ -45,12 +45,16 @@ def send_email(
 
     except smtplib.SMTPAuthenticationError:
         logger.error(msg="Incorrect email or password", exc_info=True)
+        raise
     except smtplib.SMTPConnectError:
         logger.error(
             msg="Failed to establish connection with smtp server",
             exc_info=True,
         )
+        raise
     except smtplib.SMTPException:
         logger.error(msg="SMTP error", exc_info=True)
+        raise
     except Exception as e:
         logger.error(msg=f"Failed to send email.\nError: {str(e)}")
+        raise

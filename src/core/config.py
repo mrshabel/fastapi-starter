@@ -54,6 +54,9 @@ class Settings(BaseSettings):
     AWS_SECRET_KEY: str
     AWS_REGION: str
 
+    # broker
+    BROKER_URL: str
+
     # compose cors allowed origins
     @property
     def ALLOWED_ORIGINS(self) -> list[str]:
@@ -65,4 +68,4 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=_env)
 
 
-AppConfig = Settings()
+AppConfig = Settings()  # type: ignore
