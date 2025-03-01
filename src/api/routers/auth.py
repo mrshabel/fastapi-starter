@@ -1,10 +1,11 @@
 from typing import Annotated
-from fastapi import APIRouter, Depends, Header, BackgroundTasks
+from fastapi import APIRouter, Depends, Header
 from fastapi.security import OAuth2PasswordRequestForm
 from src.services import AuthService
 from src.models import user as user_models, Message
 from src.api.dependencies import SessionDep, CurrentUser
-from src.utils.mailer import send_email
+from src.core.exceptions import PermissionDeniedError
+from src.tasks import email as email_tasks
 
 router = APIRouter(
     prefix="/auth",
@@ -28,7 +29,6 @@ AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
 async def signup(
     data: user_models.UserRegister,
     auth_service: AuthServiceDep,
-    background_tasks: BackgroundTasks,
 ):
     """
     Create new user account
@@ -43,7 +43,9 @@ async def signup(
     Welcome to Shabel's world.
     Made with love
     """
-    background_tasks.add_task(send_email, recipient, subject, content)
+    email_tasks.send_email_task.delay(
+        recipient=recipient, subject=subject, content=content
+    )
     return user_models.UserPublicResponse(
         message="Signup completed successfully", data=user
     )
@@ -82,6 +84,12 @@ async def deactivate_account(current_user: CurrentUser, auth_service: AuthServic
     """
     Delete own user
     """
+    # disable superuser from deactivating account
+    if current_user.role == user_models.UserRole.SUPERUSER:
+        raise PermissionDeniedError(
+            "Superusers are not allowed to deactivate their accounts"
+        )
+
     await auth_service.deactivate_account(id=current_user.sub, role=current_user.role)
 
     return Message(message="Account deactivated successfully")

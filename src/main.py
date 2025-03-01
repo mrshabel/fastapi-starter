@@ -28,6 +28,8 @@ app = FastAPI(
     version=AppConfig.PROJECT_VERSION,
     docs_url="/docs" if AppConfig.IS_DEVELOPMENT else None,
     redoc_url="/redoc" if AppConfig.IS_DEVELOPMENT else None,
+    # root_path="/api" if AppConfig.IS_DEVELOPMENT else "/",
+    openapi_url="/openapi.json" if AppConfig.IS_DEVELOPMENT else None,
 )
 
 # create mount point in development

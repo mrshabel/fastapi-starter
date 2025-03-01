@@ -10,6 +10,7 @@ dependencies = [
     "boto3>=1.36.26",
     "celery[redis]>=5.4.0",
     "fastapi[standard]>=0.115.8",
+    "flower>=2.0.1",
     "passlib[bcrypt]>=1.7.4",
     "pydantic-settings>=2.7.1",
     "pyjwt>=2.10.1",

@@ -1,6 +1,7 @@
 import asyncio
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
+from fastapi.logger import logger
 from src.core.config import AppConfig
 from src.models.user import UserCreate, User, UserRole
 from src.core.security import create_password_hash
@@ -26,11 +27,11 @@ async def seed_data():
                 session.add(user)
                 await session.commit()
                 await session.refresh(user)
-                print("Seeding complete")
+                logger.info("Seeding complete")
         except Exception:
             # rollback transaction
             await session.rollback()
-            print("Failed to seed data")
+            logger.error("Failed to seed data")
 
 
 if __name__ == "__main__":
