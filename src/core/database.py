@@ -28,6 +28,15 @@ def configure_sqlite_connection(conn, record):
     # WAL for better concurrency support
     conn.execute("PRAGMA journal_mode = WAL;")
 
+    # use memory as temporal storage
+    conn.execute("PRAGMA temp_store = 2;")
+
+    # faster synchronization to keep data safe
+    conn.execute("PRAGMA synchronous = 1;")
+
+    # increase cache size from 2mb to 64mb
+    conn.execute("PRAGMA cache_size = -64000;")
+
 
 async def init_db():
     async with AsyncSession(engine) as session:

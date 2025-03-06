@@ -88,8 +88,30 @@ services:
         networks:
             - fastapi_starter_network
 
+    prometheus:
+        container_name: fastapi-starter-prometheus
+        image: prom/prometheus
+        ports:
+            - 9090:9090
+        volumes:
+            - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+        networks:
+            - fastapi_starter_network
+
+    grafana:
+        container_name: fastapi-starter-grafana
+        image: grafana/grafana-oss
+        ports:
+            - 3000
+        # user: "0"
+        volumes:
+            - ./grafana-data:/var/lib/grafana
+        networks:
+            - fastapi_starter_network
+
 volumes:
     data:
+    grafana-data: {}
 
 networks:
     fastapi_starter_network:

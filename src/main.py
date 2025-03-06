@@ -1,4 +1,3 @@
-import time
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,13 +5,12 @@ from fastapi.logger import logger
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
-from src.core.config import AppConfig
+from prometheus_client import make_asgi_app
 
+from src.core.config import AppConfig
 from src.core.database import init_db
 from src.api.main import api_router
-from src.api.middleware import (
-    ExceptionHandlerMiddleware,
-)
+from src.api.middleware import ExceptionHandlerMiddleware, MonitoringMiddleware
 
 
 @asynccontextmanager
@@ -32,6 +30,10 @@ app = FastAPI(
     openapi_url="/openapi.json" if AppConfig.IS_DEVELOPMENT else None,
 )
 
+# add prometheus asgi middleware to route /metrics requests
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
+
 # create mount point in development
 if AppConfig.IS_DEVELOPMENT:
     # TODO: authorize static file access. https://github.com/fastapi/fastapi/issues/858#issuecomment-876564020
@@ -49,16 +51,10 @@ app.add_middleware(
 
 
 # add middlewares here
-@app.middleware("http")
-async def add_process_time_header(request: Request, call_next):
-    start_time = time.perf_counter()
-    response = await call_next(request)
-    process_time = time.perf_counter() - start_time
-    response.headers["X-Process-Time"] = f"{(process_time * 1000):.2f}"
-    return response
 
-
+# error middleware is placed first since FastAPI loads middlewares in a sequential order unto a stack for further processing
 app.add_middleware(ExceptionHandlerMiddleware)
+app.add_middleware(MonitoringMiddleware)
 
 
 # exception handlers

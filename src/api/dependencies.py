@@ -22,13 +22,8 @@ from src.services import LocalStorageService, S3StorageService
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Get the db session"""
     Session = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)  # type: ignore
-    async with Session.begin() as session:  # type: ignore
-        try:
-            yield session
-        except Exception:
-            # rollback transaction
-            await session.rollback()
-            raise
+    async with Session() as session:  # type: ignore
+        yield session
 
 
 SessionDep = Annotated[AsyncSession, Depends(get_db)]
