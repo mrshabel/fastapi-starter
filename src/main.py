@@ -51,18 +51,10 @@ app.add_middleware(
 
 
 # add middlewares here
-# @app.middleware("http")
-# async def add_process_time_header(request: Request, call_next):
-#     start_time = time.perf_counter()
-#     response = await call_next(request)
-#     process_time = time.perf_counter() - start_time
-#     response.headers["X-Process-Time"] = f"{(process_time * 1000):.2f}"
-#     return response
 
-
-# monitoring middleware is placed first since FastAPI loads middlewares in a sequential order unto a stack for further processing
-app.add_middleware(MonitoringMiddleware)
+# error middleware is placed first since FastAPI loads middlewares in a sequential order unto a stack for further processing
 app.add_middleware(ExceptionHandlerMiddleware)
+app.add_middleware(MonitoringMiddleware)
 
 
 # exception handlers

@@ -121,8 +121,8 @@ class MonitoringMiddleware(BaseHTTPMiddleware):
         # get request monitoring details
         # strip trailing slash for non-base path since "/users" and "/users/" are essentially aggregated as different paths
         endpoint = (
-            request.url.path[:1]
-            if len(request.url.path) > 1 and request.url.path[-1] != "/"
+            request.url.path[:-1]
+            if len(request.url.path) > 1 and request.url.path[-1] == "/"
             else request.url.path
         )
 

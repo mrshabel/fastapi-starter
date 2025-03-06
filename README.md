@@ -13,7 +13,8 @@ I found myself spending countless hours to setup my FastAPI projects over and ov
 -   **📄 Auto-generated OpenAPI Docs** – `/docs` and `/redoc`
 -   **📦 Docker Support** – Preconfigured `Dockerfile` & `docker-compose`
 -   **🗄️ SQLModel ORM** – A hybrid of SQLAlchemy and Pydantic, all your models and schemas as one entity
--   **🛠️ Background Tasks** – Async task execution support
+-   **🛠️ Background Tasks** – Async task execution support with celery workers
+-   ⏲️ **Monitoring and Observability** - `Prometheus `and `Grafana`
 -   **🔒 JWT-Based Authentication** – Secure access control
 -   **✅ Pre-configured Linting & Formatting** – Uses `ruff`
 
@@ -30,6 +31,8 @@ fastapi-starter/
 │── README.md                  # Documentation
 │── run.sh                     # Script to start the application
 │── uv.lock                    # Dependency lock file
+│── nginx/                     # Nginx configuration with SSL certificates
+│── prometheus/                # Prometheus configuration
 │── src/                       # Application source code
 │   ├── api/                   # API route definitions
 │   ├── core/                  # Core configurations & settings
@@ -158,3 +161,11 @@ ruff format
    `NB: this stressful configuration won't really be needed after integrating an IaaC tool, lol😅`
 
 Get to know more about ssl certificates [here](https://www.digitalocean.com/community/tutorials/how-to-create-a-self-signed-ssl-certificate-for-nginx-in-ubuntu-20-04-1 "Creating Self-Signed Certificates").
+
+### Grafana Dashboard Setup
+
+1. Access the Grafana UI on `http://localhost:3001` and create a new dashboard
+2. Enter `host.docker.internal:9090` to access Prometheus on the host server since `localhost` will point to the grafana container
+   `TIP: a custom grafana dashboard will be made available to import into your project`
+
+Get to know more about setting up Grafana dashboards [here](https://prometheus.io/docs/visualization/grafana/ "Setting up Grafana dashboards for Prometheus").
