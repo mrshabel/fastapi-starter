@@ -1,4 +1,5 @@
 import sqlite3
+import sqlalchemy.exc
 from sqlmodel import Table, func, col
 from datetime import date
 from enum import Enum
@@ -32,8 +33,15 @@ def build_query_filter(
     return filter
 
 
-def parse_sqlite_integrity_error(e: sqlite3.IntegrityError) -> str:
-    """Parses and sanitizes SQLite IntegrityError messages."""
+def parse_sqlite_integrity_error(
+    e: sqlite3.IntegrityError | sqlalchemy.exc.IntegrityError,
+) -> tuple[str, str]:
+    """
+    Parses and sanitizes SQLite IntegrityError messages.
+
+    Returns:
+        tuple[str, str]: The error message and type. The error types are `unique`, `foreign`, `general`, `unknown`
+    """
     error_message = str(e)
 
     if "UNIQUE constraint failed" in error_message:
@@ -44,9 +52,9 @@ def parse_sqlite_integrity_error(e: sqlite3.IntegrityError) -> str:
                 .split("UNIQUE constraint failed: ")[1]
                 .split(".")[1]
             )
-            return f"A record with that {column_name} already exists."
+            return f"A record with that {column_name} already exists.", "unique"
         except IndexError:
-            return "A record with that value already exists."
+            return "A record with that value already exists.", "unique"
 
     elif "FOREIGN KEY constraint failed" in error_message:
         # extract the failing table
@@ -54,12 +62,12 @@ def parse_sqlite_integrity_error(e: sqlite3.IntegrityError) -> str:
             table_name = error_message.split("FOREIGN KEY constraint failed: ")[
                 1
             ].split(".")[0]
-            return f"The related {table_name} record does not exist."
+            return f"The related {table_name} record does not exist.", "foreign"
         except IndexError:
-            return "A related record does not exist."
+            return "A related record does not exist.", "foreign"
 
     elif "CHECK constraint failed" in error_message:
-        return "The provided data violates a check constraint."
+        return "The provided data violates a check constraint.", "general"
 
     # return default response
-    return "An unexpected error occurred."
+    return "An unexpected error occurred.", "unknown"
