@@ -74,7 +74,7 @@ services:
         container_name: fastapi-starter-worker-dashboard
         build: .
         image: fastapi-starter-api
-        command: celery --app src.tasks.main.celery_app flower
+        command: celery --app src.tasks.main.celery_app flower --url_prefix=flower
         ports:
             - 5555:5555
         env_file:
@@ -95,18 +95,25 @@ services:
             - 8080:8080
             - 8443:8443
         volumes:
-            - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf
+            # - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf
+            - ./nginx/api_gateway.conf:/etc/nginx/nginx.conf
             - ./nginx/certs:/etc/ssl
         networks:
             - fastapi_starter_network
         depends_on:
             - api
+            - prometheus
+            - grafana
 
     prometheus:
         container_name: fastapi-starter-prometheus
         image: prom/prometheus
         ports:
             - 9090:9090
+        command:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            # specify public url to serve UI and static assets. this is needed since we are behind a proxy
+            - "--web.external-url=https://localhost:8443/prometheus/"
         volumes:
             - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
         networks:
@@ -117,6 +124,10 @@ services:
         image: grafana/grafana-oss
         ports:
             - 3001:3000
+        environment:
+            # set root url to accurately serve static assets
+            - GF_SERVER_ROOT_URL=https://localhost:8443/grafana/
+            - GF_SERVER_DOMAIN=localhost
         volumes:
             - ./grafana-data:/var/lib/grafana
         networks:
